@@ -1,4 +1,4 @@
-const OUTPUT_LANGUAGE = 'Bulgarian';
+const OUTPUT_LANGUAGE = 'English';
 
 
 export function prepareIdeasListPrompt(userPrompt: string) {
