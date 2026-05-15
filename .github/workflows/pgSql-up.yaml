@@ -1,0 +1,49 @@
+name: pgSql-up
+
+on: workflow_dispatch
+
+# environments
+# "PRODUCTION" | "PRERELEASE" | "DEVELOP"
+
+env:
+  HOST_USER: "ubuntu"
+  APP_DIR: "/home/ubuntu/fin-tracker/be"
+  COMPOSE_NAME: "pgsql-compose.yaml"
+  PROJECT_NAME: "pgsql_fin_tracker"
+
+# secrets
+# - REMOTE_HOST
+# - SSH_KEY
+# - SSH_PASSWORD
+
+jobs:
+  deploy:
+    environment: PRODUCTION
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Copy Docker Compose to Server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ env.HOST_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSWORD }}
+          source: ".infra/${{ env.COMPOSE_NAME }}"
+          target: ${{ env.APP_DIR }}
+          strip_components: 1
+      
+      - name: Run PgSql
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ env.HOST_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSWORD }}
+          script: |
+            cd ${{ env.APP_DIR }}
+
+            docker compose -p ${{ env.PROJECT_NAME }} -f ${{ env.COMPOSE_NAME }} down --remove-orphans || true
+            docker compose -p ${{ env.PROJECT_NAME }} -f ${{ env.COMPOSE_NAME }} --env-file .env up -d
