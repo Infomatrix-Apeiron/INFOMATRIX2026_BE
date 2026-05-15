@@ -1,0 +1,20 @@
+networks:
+  fin-tracker-network:
+    external: true
+
+services:
+  app:
+    image: fin-tracker-be:latest
+    container_name: fin-tracker-be
+    restart: always
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      - PORT=3001
+    ports:
+      - "9778:3001"
+    networks:
+      - fin-tracker-network

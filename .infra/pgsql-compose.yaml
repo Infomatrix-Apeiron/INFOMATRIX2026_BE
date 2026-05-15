@@ -1,0 +1,23 @@
+# volumes:
+#   pg-data:
+
+networks:
+  fin-tracker-network:
+    external: true
+
+services:
+  postgres:
+    image: postgres
+    container_name: postgres_fin-tracker
+    restart: always
+    environment:
+      POSTGRES_DB: ${PG_DATABASE}
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+    ports:
+      - "5432:5432"
+    networks:
+      - fin-tracker-network
+    volumes:
+      # - pg-data:/var/lib/postgresql
+      - ./pgsql-data:/var/lib/postgresql

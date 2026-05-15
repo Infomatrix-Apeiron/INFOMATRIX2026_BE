@@ -1,0 +1,14 @@
+networks:
+  fin-tracker-network:
+    external: true
+
+services:
+  tunnel:
+    image: cloudflare/cloudflared
+    container_name: cloudflare-tunnel-fin-tracker
+    restart: always
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    command: tunnel run
+    networks:
+      - fin-tracker-network
