@@ -22,6 +22,7 @@ export class GeminiService {
 
     async generateIdeas(
         text: string,
+        age: number,
         files?: {
             mimeType: string;
             buffer: Buffer;
@@ -30,7 +31,7 @@ export class GeminiService {
 
         const parts: any[] = [
             {
-                text: prepareIdeasListPrompt(text ?? '')
+                text: prepareIdeasListPrompt(text ?? '', age)
             }
         ];
 
@@ -87,12 +88,13 @@ export class GeminiService {
     async generateInstructions(
         title: string,
         description: string,
-        photo?: { mimeType: string; buffer: Buffer }
+        age: number,
+        photo?: { mimeType: string; buffer: Buffer },
     ) {
 
         const parts: any[] = [
             {
-                text: getAssemblyPrompt(title, description)
+                text: getAssemblyPrompt(title, description, age)
             }
         ];
 
@@ -140,12 +142,13 @@ export class GeminiService {
     }
 
     async generateFeedback(
-        photo?: { mimeType: string; buffer: Buffer }
+        age: number,
+        photo?: { mimeType: string; buffer: Buffer },
     ): Promise<string> {
 
         const parts: any[] = [
             {
-                text: prepareResultPrompt()
+                text: prepareResultPrompt(age)
             }
         ];
 
@@ -245,6 +248,7 @@ export class GeminiService {
     async assembleInstructionsWithImages(
         title: string,
         description: string,
+        age: number,
         photo?: { mimeType: string; buffer: Buffer }
     ) {
 
@@ -253,7 +257,7 @@ export class GeminiService {
 
         this.logger.log(`[Pipeline] start requestId=${requestId} title="${title}"`);
 
-        const instructions = await this.generateInstructions(title, description, photo);
+        const instructions = await this.generateInstructions(title, description, age, photo);
 
         const stepsCount = instructions.steps?.length ?? 0;
         this.logger.log(`[Pipeline] instructions ready requestId=${requestId} steps=${stepsCount}`);
