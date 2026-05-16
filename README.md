@@ -1,3 +1,5 @@
+Link for presentation: https://canva.link/pb5q7y4k7hm7b6y
+
 # Apeiron — Backend
 
 This is the backend repository for the **Apeiron** project — an application that helps build eco-awareness in children by teaching them about recycling and the responsible use of secondary raw materials. The backend powers the educational experience with AI-driven content generated through the Google Gemini API, delivering interactive lessons, prompts, and feedback to young users.
