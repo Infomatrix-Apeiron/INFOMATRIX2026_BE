@@ -1,4 +1,4 @@
-import {Body, Controller, Post, UploadedFiles, UseInterceptors} from '@nestjs/common';
+import {Body, Controller, HttpException, HttpStatus, Post, UploadedFiles, UseInterceptors} from '@nestjs/common';
 import {GeminiService} from './gemini.service';
 import {FilesInterceptor} from '@nestjs/platform-express';
 
@@ -14,13 +14,29 @@ export class AiController {
         @UploadedFiles() files: Express.Multer.File[],
         @Body('prompt') userPrompt: string,
     ) {
-        return await this.geminiService.generateIdeas(
-            userPrompt,
-            files?.map(file => ({
-                mimeType: file.mimetype,
-                buffer: file.buffer,
-            }))
-        );
+
+        const photos = files?.map(file => ({
+            mimeType: file.mimetype,
+            buffer: file.buffer,
+        }));
+
+        // 1. SAFETY CHECK
+        const safety = await this.geminiService.checkPhotoPrivacy(photos);
+        console.log('safety', safety);
+
+        if (!safety.safe) {
+            throw new HttpException(
+                {
+                    error: 'unsafe_content',
+                    message: safety.child_friendly_message,
+                    reason: safety.reason,
+                },
+                HttpStatus.UNPROCESSABLE_ENTITY,
+            );
+        }
+
+        // 2. GENERATE IDEAS
+        return await this.geminiService.generateIdeas(userPrompt, photos);
     }
 
     @Post('generate-instructions')
