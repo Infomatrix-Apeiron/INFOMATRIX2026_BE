@@ -2,7 +2,7 @@ import {Injectable, Logger} from '@nestjs/common';
 import {ConfigService} from '@nestjs/config';
 import {GoogleGenAI} from '@google/genai';
 import {randomUUID} from 'node:crypto';
-import {getAssemblyPrompt, prepareIdeasListPrompt, prepareResultPrompt} from './gemini.prompts';
+import {getAssemblyPrompt, prepareCheckPhotoSafetyPrompt, prepareIdeasListPrompt, prepareResultPrompt} from './gemini.prompts';
 
 @Injectable()
 export class GeminiService {
@@ -18,21 +18,6 @@ export class GeminiService {
         this.ai = new GoogleGenAI({
             apiKey: this.config.get<string>('GEMINI_API_KEY')!,
         })
-    }
-
-    async generateText(prompt: string): Promise<string> {
-
-        const response = await this.ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: [
-                {
-                    role: 'user',
-                    parts: [{ text: prompt }],
-                },
-            ],
-        });
-
-        return response.text ?? '';
     }
 
     async generateIdeas(
@@ -330,5 +315,78 @@ export class GeminiService {
         }
 
         return result;
+    }
+
+    async checkPhotoPrivacy(
+        files?: { mimeType: string; buffer: Buffer }[]
+    ): Promise<{
+        safe: boolean;
+        reason: string;
+        child_friendly_message: string;
+    }> {
+
+        // Якщо фото нема — нема чого перевіряти
+        if (!files?.length) {
+            return { safe: true, reason: 'No image provided', child_friendly_message: '' };
+        }
+
+        const parts: any[] = [
+            { text: prepareCheckPhotoSafetyPrompt() }
+        ];
+
+        for (const file of files) {
+            parts.push({
+                inlineData: {
+                    mimeType: file.mimeType,
+                    data: file.buffer.toString('base64'),
+                },
+            });
+        }
+
+        const schema = {
+            type: "object",
+            properties: {
+                safe: { type: "boolean" },
+                reason: { type: "string" },
+                child_friendly_message: { type: "string" },
+            },
+            required: ["safe", "reason", "child_friendly_message"]
+        };
+
+        try {
+            const response = await this.ai.models.generateContent({
+                model: 'gemini-3-flash-preview',
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: schema,
+                    maxOutputTokens: 500,
+                },
+                contents: [
+                    {
+                        role: 'user',
+                        parts,
+                    },
+                ],
+            });
+
+            const textResponse = response.text ?? '{}';
+            const result = JSON.parse(textResponse);
+
+            if (!result.safe) {
+                this.logger.warn(`[Safety] Photo blocked: ${result.reason}`);
+            }
+
+            return result;
+
+        } catch (err: any) {
+            this.logger.error(`[Safety] Check failed: ${err?.message}`);
+
+            // Fail closed: якщо не змогли перевірити — блокуємо для безпеки
+            return {
+                safe: false,
+                reason: 'Unable to verify image safety',
+                child_friendly_message: "Something went wrong. Let's try with a different photo!",
+            };
+        }
     }
 }
